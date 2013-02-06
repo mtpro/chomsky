@@ -77,6 +77,7 @@
 		private $nonterminals = array();
 		private $rules = array();
 		private $startSymbol = null;
+		private $flaggedEpsilons = array();
 		
 		# setters
 		public function __construct($startSymbol, $terminals=array(), $otherNonterminals=array(), $rules=array()) {
@@ -87,6 +88,10 @@
 			$this->addRules($rules);
 		}
 		
+		public function flagEpsilon($oldRule) {
+			$this->flaggedEpsilons[] = $oldRule;
+		}
+
 		public function addTerminal($terminal) {
 			if(!is_string($terminal)) {
 				throw new Exception("Can't add terminal '".print_r($terminal, true)."', not a string.");
@@ -545,6 +550,9 @@
 						continue;
 					}
 					
+					if(in_array($newRule, $this->flaggedEpsilons, false)) {
+						continue;
+					}
 					if(!$this->ruleExists($newRule)) {
 						$this->addRule($newRule);
 					}
@@ -571,6 +579,11 @@
 					// get rid of it
 					$this->eliminateEpsilon($rule->getLeft());
 					$this->deleteRule($rule);
+
+					// Now we need to ensure that this rule is not added
+					// by eliminateEpsilon() again, as this throws us into
+					// an infinite loop
+					$this->flagEpsilon($rule);
 
 					// and START OVER
 					continue 2;
